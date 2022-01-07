@@ -57,20 +57,23 @@ void setup() {
 void loop() {
   // CHECK BUTTONS
   btns();
-  // CYCLE
-  if (btn_cycle_state == 3) cycle();
-  // RECORD
-  if (btn_rec_state == 3) rec();
   // SWITCH RELAYS
-  // relays();
-  // CHECK TEMP/HUMIDITY
-  // temp_hum();
-  // CHECK OZONE HIGH
-  // o3_high();
-  // CHECK OZONE LOW
-  // o3_low();
+  relays();
+  // CHECK CYCLE
+  if (btn_cycle_state == 3) cycle();
+  // CHECK REC
+  // todo: see if this is the correct placement
+  if (btn_rec_state == 3) rec(1);
+  // CHECK READINGS
+  check_readings();
   // DISPLAY
   // disp();
+}
+
+void check_readings() {
+  temp_hum();
+  o3_high();
+  o3_low();
 }
 
 void btns() {
@@ -116,11 +119,11 @@ void o3_low() {}
 
 void cycle() {
   // all times are in minutes
-  int ozone_on = 1 * 60000;
-  int mix_1 = 1 * 60000;
-  int heat_on = 1 * 60000;
-  int mix_2 = 1 * 60000;
-  int cycle_start = millis();
+  unsigned int ozone_on = 1 * 60000;
+  unsigned int mix_1 = 1 * 60000;
+  unsigned int heat_on = 1 * 60000;
+  unsigned int mix_2 = 1 * 60000;
+  unsigned int cycle_start = millis();
 
   // turn off all relays if they are on
   digitalWrite(relay_heat, LOW);
@@ -130,40 +133,52 @@ void cycle() {
   digitalWrite(relay_neb1, LOW);
   digitalWrite(relay_neb2, LOW);
 
-  if (btn_cycle_state != 0) {
+  while (btn_cycle_state != 0) {
+    // todo: get a timer on the screen here, also turn on the correct LEDs
+    
+    // ozone on
+    if (btn_cycle_state != 0) {
     digitalWrite(relay_oz1, HIGH);
     digitalWrite(relay_oz2, HIGH);
-  }
-  while (((cycle_start - millis()) < ozone_on) && btn_cycle_state != 0) {
-    flip_flop(btn_cycle, btn_cycle_led, &btn_cycle_state);
-    flip_flop(btn_rec, btn_rec_led, &btn_rec_state);
-  }
-  if (btn_cycle_state != 0) {
-    digitalWrite(relay_oz1, LOW);
-    digitalWrite(relay_oz2, LOW);
-    digitalWrite(relay_fan, HIGH);
-  }
-  while (((cycle_start - millis()) < mix_1) && btn_cycle_state != 0) {
-    flip_flop(btn_cycle, btn_cycle_led, &btn_cycle_state);
-    flip_flop(btn_rec, btn_rec_led, &btn_rec_state);
-  }
-  if (btn_cycle_state != 0) {
+    }
+    while (((cycle_start - millis()) < ozone_on) && btn_cycle_state != 0) {
+      flip_flop(btn_cycle, btn_cycle_led, &btn_cycle_state);
+      flip_flop(btn_rec, btn_rec_led, &btn_rec_state);
+    }
+
+    // ozone off and mix
+    if (btn_cycle_state != 0) {
+      digitalWrite(relay_oz1, LOW);
+      digitalWrite(relay_oz2, LOW);
+      digitalWrite(relay_fan, HIGH);
+    }
+    while (((cycle_start - millis()) < mix_1) && btn_cycle_state != 0) {
+      flip_flop(btn_cycle, btn_cycle_led, &btn_cycle_state);
+      flip_flop(btn_rec, btn_rec_led, &btn_rec_state);
+    }
+
+    // end mix and heat on
+    if (btn_cycle_state != 0) {
+      digitalWrite(relay_fan, LOW);
+      digitalWrite(relay_heat, HIGH);
+    }
+    while (((cycle_start - millis()) < heat_on) && btn_cycle_state != 0) {
+      flip_flop(btn_cycle, btn_cycle_led, &btn_cycle_state);
+      flip_flop(btn_rec, btn_rec_led, &btn_rec_state);
+    }
+
+    // end heat and mix
+    if (btn_cycle_state != 0) {
+      digitalWrite(relay_heat, LOW);
+      digitalWrite(relay_fan, HIGH);
+    }
+    while (((cycle_start - millis()) < mix_2) && btn_cycle_state != 0) {
+      flip_flop(btn_cycle, btn_cycle_led, &btn_cycle_state);
+      flip_flop(btn_rec, btn_rec_led, &btn_rec_state);
+    }
+    // always turn off this fan anyway
     digitalWrite(relay_fan, LOW);
-    digitalWrite(relay_heat, HIGH);
   }
-  
-  while (((cycle_start - millis()) < heat_on) && btn_cycle_state != 0) {
-    flip_flop(btn_cycle, btn_cycle_led, &btn_cycle_state);
-    flip_flop(btn_rec, btn_rec_led, &btn_rec_state);
-  }
-  if (btn_cycle_state != 0) {}
-  digitalWrite(relay_heat, LOW);
-  digitalWrite(relay_fan, HIGH);
-  while (((cycle_start - millis()) < mix_2) && btn_cycle_state != 0) {
-    flip_flop(btn_cycle, btn_cycle_led, &btn_cycle_state);
-    flip_flop(btn_rec, btn_rec_led, &btn_rec_state);
-  }
-  digitalWrite(relay_fan, LOW);
 }
 
 void rec(bool io) {
@@ -172,7 +187,7 @@ void rec(bool io) {
 }
 
 void disp() {
-  // lcd.clear();
+  lcd.clear();
   lcd.setCursor(0,0);
   lcd.print("T:");
   lcd.print(temp_val);
@@ -226,8 +241,6 @@ void flip_flop(int check_pin, int led_pin, byte* state) {
       { // switch relay OFF
         // switch LED OFF
         digitalWrite(led_pin, LOW);
-        if (check_pin == btn_rec) rec(0);
-        if (check_pin == btn_cycle) cycle(0);
         *state = 1;
       }
       break;
@@ -240,8 +253,6 @@ void flip_flop(int check_pin, int led_pin, byte* state) {
       { // switch relay ON
         // switch LED ON
         digitalWrite(led_pin, HIGH);
-        if (check_pin == btn_rec) rec(1);
-        if (check_pin == btn_cycle) cycle(1);
         *state = 3;
       }
       break;

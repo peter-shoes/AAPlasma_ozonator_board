@@ -52,10 +52,11 @@ DFRobot_DHT20 dht20;
 // FUNC DEFS
 void btns();
 void relays();
+void check_readings();
 void temp_hum();
 void o3_high();
 void o3_low();
-void cycle(bool io);
+void cycle();
 void rec(bool io);
 void disp();
 void timer(int mins, String txt);
