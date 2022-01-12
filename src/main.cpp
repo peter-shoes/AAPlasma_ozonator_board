@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <Adafruit_LiquidCrystal.h>
+#include <LiquidCrystal_I2C.h>
 #include <DFRobot_DHT20.h>
 #include <defs.hpp>
 
@@ -9,34 +9,35 @@ void setup() {
   Serial.begin(9600);
 
   // SET PINMODES
-  pinMode(btn_heat, INPUT_PULLUP);
-  pinMode(btn_fan, INPUT_PULLUP);
-  pinMode(btn_oz1, INPUT_PULLUP);
-  pinMode(btn_oz2, INPUT_PULLUP);
-  pinMode(btn_neb1, INPUT_PULLUP);
-  pinMode(btn_neb2, INPUT_PULLUP);
-  pinMode(btn_cycle, INPUT_PULLUP);
-  pinMode(btn_rec, INPUT_PULLUP);
+  pinMode(heat.btn_pin, INPUT_PULLUP);
+  pinMode(fan.btn_pin, INPUT_PULLUP);
+  pinMode(oz_1.btn_pin, INPUT_PULLUP);
+  pinMode(oz_2.btn_pin, INPUT_PULLUP);
+  pinMode(neb_1.btn_pin, INPUT_PULLUP);
+  pinMode(neb_2.btn_pin, INPUT_PULLUP);
+  pinMode(cycle.btn_pin, INPUT_PULLUP);
+  pinMode(rec.btn_pin, INPUT_PULLUP);
 
-  pinMode(btn_heat_led, OUTPUT);
-  pinMode(btn_fan_led, OUTPUT);
-  pinMode(btn_oz1_led, OUTPUT);
-  pinMode(btn_oz2_led, OUTPUT);
-  pinMode(btn_neb1_led, OUTPUT);
-  pinMode(btn_neb2_led, OUTPUT);
-  pinMode(btn_cycle_led, OUTPUT);
-  pinMode(btn_rec_led, OUTPUT);
+  pinMode(heat.led_pin, OUTPUT);
+  pinMode(fan.led_pin, OUTPUT);
+  pinMode(oz_1.led_pin, OUTPUT);
+  pinMode(oz_2.led_pin, OUTPUT);
+  pinMode(neb_1.led_pin, OUTPUT);
+  pinMode(neb_2.led_pin, OUTPUT);
+  pinMode(cycle.led_pin, OUTPUT);
+  pinMode(rec.led_pin, OUTPUT);
 
-  pinMode(relay_heat, OUTPUT);
-  pinMode(relay_fan, OUTPUT);
-  pinMode(relay_oz1, OUTPUT);
-  pinMode(relay_oz2, OUTPUT);
-  pinMode(relay_neb1, OUTPUT);
-  pinMode(relay_neb2, OUTPUT);
+  pinMode(heat.relay_pin_1, OUTPUT);
+  pinMode(heat.relay_pin_2, OUTPUT);
+  pinMode(fan.relay_pin_1, OUTPUT);
+  pinMode(oz_1.relay_pin_1, OUTPUT);
+  pinMode(oz_2.relay_pin_1, OUTPUT);
+  pinMode(neb_1.relay_pin_1, OUTPUT);
+  pinMode(neb_2.relay_pin_1, OUTPUT);
 
   // START LCD
-  lcd.begin(16, 2);
-  lcd.setBacklight(HIGH);
+  lcd.init();
+  lcd.backlight();
   lcd.setCursor(0,0);
   lcd.print("====AAPLASMA====");
   lcd.setCursor(0,1);
@@ -51,23 +52,35 @@ void setup() {
   // MQ-131 SENSOR HEAT UP
   // timer(1, "HEATING MQ-131:");
   // lcd.clear();
+
+  // turn off LEDS
+  digitalWrite(heat.led_pin, LOW);
+  digitalWrite(fan.led_pin, LOW);
+  digitalWrite(oz_1.led_pin, LOW);
+  digitalWrite(oz_2.led_pin, LOW);
+  digitalWrite(neb_1.led_pin, LOW);
+  digitalWrite(neb_2.led_pin, LOW);
+  digitalWrite(cycle.led_pin, LOW);
+  digitalWrite(rec.led_pin, LOW);
   
 }
 
 void loop() {
   // CHECK BUTTONS
   btns();
+  // UPDATE STATES
+  update_states();
   // SWITCH RELAYS
   relays();
   // CHECK CYCLE
-  if (btn_cycle_state == 3) cycle();
+  // if (btn_cycle_state == 3) cycle();
   // CHECK REC
   // todo: see if this is the correct placement
-  if (btn_rec_state == 3) rec(1);
+  // if (btn_rec_state == 3) rec(1);
   // CHECK READINGS
   check_readings();
   // DISPLAY
-  // disp();
+  disp();
 }
 
 void check_readings() {
@@ -77,35 +90,62 @@ void check_readings() {
 }
 
 void btns() {
-  flip_flop(btn_heat, btn_heat_led, &btn_heat_state);
-  flip_flop(btn_fan, btn_fan_led, &btn_fan_state);
-  flip_flop(btn_oz1, btn_oz1_led, &btn_oz1_state);
-  flip_flop(btn_oz2, btn_oz2_led, &btn_oz2_state);
-  flip_flop(btn_neb1, btn_neb1_led, &btn_neb1_state);
-  flip_flop(btn_neb2, btn_neb2_led, &btn_neb2_state);
-  flip_flop(btn_cycle, btn_cycle_led, &btn_cycle_state);
-  flip_flop(btn_rec, btn_rec_led, &btn_rec_state);
+  flip_flop(&heat);
+  flip_flop(&fan);
+  flip_flop(&oz_1);
+  flip_flop(&oz_2);
+  flip_flop(&neb_1);
+  flip_flop(&neb_2);
+  flip_flop(&cycle);
+  flip_flop(&rec);
+}
+
+void update_states() {
+
 }
 
 void relays() {
-  // this also controls the heater fan
-  if (btn_heat_state) digitalWrite(relay_heat, HIGH);
-  else digitalWrite(relay_heat, LOW);
-
-  if (btn_fan_state) digitalWrite(relay_fan, HIGH);
-  else digitalWrite(relay_fan, LOW);
-
-  if (btn_oz1_state) digitalWrite(relay_oz1, HIGH);
-  else digitalWrite(relay_oz1, LOW);
-
-  if (btn_oz2_state) digitalWrite(relay_oz2, HIGH);
-  else digitalWrite(relay_oz2, LOW);
-
-  if (btn_neb1_state) digitalWrite(relay_neb1, HIGH);
-  else digitalWrite(relay_neb1, LOW);
-
-  if (btn_neb2_state) digitalWrite(relay_neb2, HIGH);
-  else digitalWrite(relay_neb2, LOW);
+  if (heat.state != heat.prev_state) {
+    if (heat.state == 2) {
+      digitalWrite(heat.relay_pin_1, HIGH);
+      digitalWrite(heat.relay_pin_2, HIGH);
+    }
+    else {
+      digitalWrite(heat.relay_pin_1, LOW);
+      digitalWrite(heat.relay_pin_1, LOW);
+    }
+    heat.prev_state = heat.state;
+  }
+  
+  if (fan.state != fan.prev_state) {
+    if (fan.state == 2) digitalWrite(fan.relay_pin_1, HIGH);
+    else digitalWrite(fan.relay_pin_1, LOW);
+    fan.prev_state = fan.state;
+  }
+  
+  if (oz_1.state != oz_1.prev_state) {
+    if (oz_1.state == 2) digitalWrite(oz_1.relay_pin_1, HIGH);
+    else digitalWrite(oz_1.relay_pin_1, LOW);
+    oz_1.prev_state = oz_1.state;
+  }
+  
+  if (oz_2.state != oz_2.prev_state) {
+    if (oz_2.state == 2) digitalWrite(oz_2.relay_pin_1, HIGH);
+    else digitalWrite(oz_2.relay_pin_1, LOW);
+    oz_2.prev_state = oz_2.state;
+  }
+  
+  if (neb_1.state != neb_1.prev_state) {
+    if (neb_1.state == 2) digitalWrite(neb_1.relay_pin_1, HIGH);
+    else digitalWrite(neb_1.relay_pin_1, LOW);
+    neb_1.prev_state = neb_2.state;
+  }
+  
+  if (neb_2.state != neb_2.prev_state) {
+    if (neb_2.state == 2) digitalWrite(neb_2.relay_pin_1, HIGH);
+    else digitalWrite(neb_2.relay_pin_1, LOW);
+    neb_2.prev_state = neb_2.state;
+  }
 }
 
 void temp_hum() {
@@ -117,7 +157,7 @@ void o3_high() {}
 
 void o3_low() {}
 
-void cycle() {
+void run_cycle() {
   // all times are in minutes
   unsigned int ozone_on = 1 * 60000;
   unsigned int mix_1 = 1 * 60000;
@@ -126,62 +166,65 @@ void cycle() {
   unsigned int cycle_start = millis();
 
   // turn off all relays if they are on
-  digitalWrite(relay_heat, LOW);
-  digitalWrite(relay_fan, LOW);
-  digitalWrite(relay_oz1, LOW);
-  digitalWrite(relay_oz2, LOW);
-  digitalWrite(relay_neb1, LOW);
-  digitalWrite(relay_neb2, LOW);
+  digitalWrite(heat.relay_pin_1, LOW);
+  digitalWrite(heat.relay_pin_2, LOW);
+  digitalWrite(fan.relay_pin_1, LOW);
+  digitalWrite(oz_1.relay_pin_1, LOW);
+  digitalWrite(oz_2.relay_pin_1, LOW);
+  digitalWrite(neb_1.relay_pin_1, LOW);
+  digitalWrite(neb_2.relay_pin_1, LOW);
 
-  while (btn_cycle_state != 0) {
+  while (cycle.state != 0) {
     // todo: get a timer on the screen here, also turn on the correct LEDs
     
     // ozone on
-    if (btn_cycle_state != 0) {
-    digitalWrite(relay_oz1, HIGH);
-    digitalWrite(relay_oz2, HIGH);
+    if (cycle.state != 0) {
+    digitalWrite(oz_1.relay_pin_1, HIGH);
+    digitalWrite(oz_2.relay_pin_1, HIGH);
     }
-    while (((cycle_start - millis()) < ozone_on) && btn_cycle_state != 0) {
-      flip_flop(btn_cycle, btn_cycle_led, &btn_cycle_state);
-      flip_flop(btn_rec, btn_rec_led, &btn_rec_state);
+    while (((cycle_start - millis()) < ozone_on) && cycle.state != 0) {
+      flip_flop(&cycle);
+      flip_flop(&rec);
     }
 
     // ozone off and mix
-    if (btn_cycle_state != 0) {
-      digitalWrite(relay_oz1, LOW);
-      digitalWrite(relay_oz2, LOW);
-      digitalWrite(relay_fan, HIGH);
+    if (cycle.state != 0) {
+      digitalWrite(oz_1.relay_pin_1, LOW);
+      digitalWrite(oz_2.relay_pin_1, LOW);
+      digitalWrite(fan.relay_pin_1, HIGH);
     }
-    while (((cycle_start - millis()) < mix_1) && btn_cycle_state != 0) {
-      flip_flop(btn_cycle, btn_cycle_led, &btn_cycle_state);
-      flip_flop(btn_rec, btn_rec_led, &btn_rec_state);
+    while (((cycle_start - millis()) < mix_1) && cycle.state != 0) {
+      flip_flop(&cycle);
+      flip_flop(&rec);
     }
 
     // end mix and heat on
-    if (btn_cycle_state != 0) {
-      digitalWrite(relay_fan, LOW);
-      digitalWrite(relay_heat, HIGH);
+    if (cycle.state != 0) {
+      digitalWrite(fan.relay_pin_1, LOW);
+      digitalWrite(heat.relay_pin_1, HIGH);
+      digitalWrite(heat.relay_pin_2, HIGH);
     }
-    while (((cycle_start - millis()) < heat_on) && btn_cycle_state != 0) {
-      flip_flop(btn_cycle, btn_cycle_led, &btn_cycle_state);
-      flip_flop(btn_rec, btn_rec_led, &btn_rec_state);
+    while (((cycle_start - millis()) < heat_on) && cycle.state != 0) {
+      flip_flop(&cycle);
+      flip_flop(&rec);
     }
 
     // end heat and mix
-    if (btn_cycle_state != 0) {
-      digitalWrite(relay_heat, LOW);
-      digitalWrite(relay_fan, HIGH);
+    if (cycle.state != 0) {
+      digitalWrite(heat.relay_pin_1, LOW);
+      digitalWrite(heat.relay_pin_2, LOW);
+      digitalWrite(fan.relay_pin_1, HIGH);
     }
-    while (((cycle_start - millis()) < mix_2) && btn_cycle_state != 0) {
-      flip_flop(btn_cycle, btn_cycle_led, &btn_cycle_state);
-      flip_flop(btn_rec, btn_rec_led, &btn_rec_state);
+    while (((cycle_start - millis()) < mix_2) && cycle.state != 0) {
+      flip_flop(&cycle);
+      flip_flop(&rec);
     }
     // always turn off this fan anyway
-    digitalWrite(relay_fan, LOW);
+    digitalWrite(fan.relay_pin_1, LOW);
   }
 }
 
-void rec(bool io) {
+void run_rec(bool io) {
   if (io) Serial.println("<REC&1>");
   else Serial.println("<REC&0>");
 }
@@ -233,32 +276,34 @@ void timer(int mins, String txt) {
   delay(5000);
 }
 
-void flip_flop(int check_pin, int led_pin, byte* state) {
-  switch( *state )
+void flip_flop(btn_interface *inter) {
+  switch( inter->state )
   {
     case 0://------------------------ I'm off and in restmode
-      if ( digitalRead(check_pin) == LOW )
+      if ( digitalRead(inter->btn_pin) == LOW )
       { // switch relay OFF
         // switch LED OFF
-        digitalWrite(led_pin, LOW);
-        *state = 1;
+        inter->prev_state = 0;
+        inter->state = 1;
       }
       break;
     case 1://------------------------ I'm in ON mode, w8 4 keyrelease
-      if ( digitalRead(check_pin) == HIGH )
-        *state = 2;
+      if ( digitalRead(inter->btn_pin) == HIGH )
+        inter->prev_state = 1;
+        inter->state = 2;
       break;
     case 2://------------------------ I'm ON and in restmode
-      if (  digitalRead(check_pin) == LOW )
+      if (  digitalRead(inter->btn_pin) == LOW )
       { // switch relay ON
         // switch LED ON
-        digitalWrite(led_pin, HIGH);
-        *state = 3;
+        inter->prev_state - 2;
+        inter->state = 3;
       }
       break;
     case 3://------------------------ I'm in OFF mode, w8 4 keyrelease
-      if ( digitalRead(check_pin) == HIGH )
-        *state = 0;
+      if ( digitalRead(inter->btn_pin) == HIGH )
+        inter->prev_state = 3;
+        inter->state = 0;
       break;
   }
 }

@@ -1,43 +1,26 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <Adafruit_LiquidCrystal.h>
+#include <LiquidCrystal_I2C.h>
 #include <DFRobot_DHT20.h>
 
-// PIN DEFS
-const int btn_heat  = 22;
-const int btn_fan = 24;
-const int btn_oz1 = 26;
-const int btn_oz2 = 28;
-const int btn_neb1 = 30;
-const int btn_neb2 = 32;
-const int btn_cycle = 34;
-const int btn_rec = 36;
+typedef struct {
+    int btn_pin;
+    int led_pin;
+    int relay_pin_1;
+    int relay_pin_2;
+    byte state = 0;
+    byte prev_state = 4;
+} btn_interface;
 
-const int btn_heat_led  = 23;
-const int btn_fan_led = 25;
-const int btn_oz1_led = 27;
-const int btn_oz2_led = 29;
-const int btn_neb1_led = 31;
-const int btn_neb2_led = 33;
-const int btn_cycle_led = 35;
-const int btn_rec_led = 37;
-
-const int relay_heat = 45;
-const int relay_fan = 45;
-const int relay_oz1 = 45;
-const int relay_oz2 = 45;
-const int relay_neb1 = 45;
-const int relay_neb2 = 45;
-
-// DIGITAL VARS
-byte btn_heat_state = 0;
-byte btn_fan_state = 0;
-byte btn_oz1_state = 0;
-byte btn_oz2_state = 0;
-byte btn_neb1_state = 0;
-byte btn_neb2_state = 0;
-byte btn_cycle_state = 0;
-byte btn_rec_state = 0;
+// STRUCT DEFS
+btn_interface heat = {22, 23, 39, 45, 0, 4};
+btn_interface fan = {24, 25, 41, NULL};
+btn_interface oz_1 = {26, 27, 43, NULL};
+btn_interface oz_2 = {28, 29, 45, NULL};
+btn_interface neb_1 = {30, 31, 45, NULL};
+btn_interface neb_2 = {32, 33, 45, NULL};
+btn_interface cycle = {34, 35, NULL, NULL};
+btn_interface rec = {36, 37, NULL, NULL};
 
 // MEASUREMENT VARS
 float temp_val = 0;
@@ -46,18 +29,19 @@ float o3_high_val = 0;
 float o3_low_val = 0;
 
 // INIT PERIPHERALS
-Adafruit_LiquidCrystal lcd(0);
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 DFRobot_DHT20 dht20;
 
 // FUNC DEFS
 void btns();
+void update_states();
 void relays();
 void check_readings();
 void temp_hum();
 void o3_high();
 void o3_low();
-void cycle();
-void rec(bool io);
+void run_cycle();
+void run_rec(bool io);
 void disp();
 void timer(int mins, String txt);
-void flip_flop(int check_pin, int led_pin, byte *state);
+void flip_flop(btn_interface *inter);
