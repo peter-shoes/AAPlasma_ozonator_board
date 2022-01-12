@@ -90,6 +90,11 @@ void check_readings() {
 }
 
 void btns() {
+  /*
+  Run the flip flop on all of the buttons
+
+  (maybe not needed?)
+  */
   flip_flop(&heat);
   flip_flop(&fan);
   flip_flop(&oz_1);
@@ -101,10 +106,24 @@ void btns() {
 }
 
 void update_states() {
+  /*
+  In theory, this would update the prev state of the structs.
 
+  Not implemented here, but it is implemented in the relays and flip flop func
+
+  Maybe it should be implemented here (?)
+  */
 }
 
 void relays() {
+  /*
+  This funstion will check if the button state has changed in the last cycle.
+
+  If the state has changed, it will switch the relay to the appropriate state (I/O).
+
+  Then, the prev state of the struct will be updated to reflect in the next cycle
+  that the state has not changed.
+  */
   if (heat.state != heat.prev_state) {
     if (heat.state == 2) {
       digitalWrite(heat.relay_pin_1, HIGH);
@@ -149,16 +168,36 @@ void relays() {
 }
 
 void temp_hum() {
+  /*
+  This is just a function to get the temp and humidity from the DHT22
+  */
   temp_val = dht20.getTemperature();
   hum_val = dht20.getHumidity();
 }
 
-void o3_high() {}
+void o3_high() {
+  /*
+  Function to get the data from the MQ-131, Ozone 2-click
+  */
+}
 
-void o3_low() {}
+void o3_low() {
+  /*
+  Function to get the data from the other ozone sensor
+  */
+}
 
 void run_cycle() {
-  // all times are in minutes
+  /*
+  Function to run the auto cycle
+  All times are in minutes
+
+  This can be modified later, but it basically goes like this:
+    1) ozone on
+    2) ozone off and mix with fan
+    3) heater on and heater fan on
+    4) heater and heater fan off and mixer fan on
+  */
   unsigned int ozone_on = 1 * 60000;
   unsigned int mix_1 = 1 * 60000;
   unsigned int heat_on = 1 * 60000;
@@ -166,13 +205,8 @@ void run_cycle() {
   unsigned int cycle_start = millis();
 
   // turn off all relays if they are on
-  digitalWrite(heat.relay_pin_1, LOW);
-  digitalWrite(heat.relay_pin_2, LOW);
-  digitalWrite(fan.relay_pin_1, LOW);
-  digitalWrite(oz_1.relay_pin_1, LOW);
-  digitalWrite(oz_2.relay_pin_1, LOW);
-  digitalWrite(neb_1.relay_pin_1, LOW);
-  digitalWrite(neb_2.relay_pin_1, LOW);
+  heat.state, oz_1.state, oz_2.state, neb_1.state, neb_2.state = 0;
+  relays();
 
   while (cycle.state != 0) {
     // todo: get a timer on the screen here, also turn on the correct LEDs
@@ -230,6 +264,15 @@ void run_rec(bool io) {
 }
 
 void disp() {
+  /*
+  Main display module function to show heat, hum and o3
+
+  This will update as often as it gets the chance, which may be bad
+
+  This checks high and low ozone sensors, but displays one:
+    if the reading is below what the MQ-131 can do, display low val
+    otherwise display the max of the two readings
+  */
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print("T:");
@@ -239,13 +282,16 @@ void disp() {
   lcd.print(hum_val);
   lcd.setCursor(0,1);
   lcd.print("O3:");
-  // if the reading is below what the mq-131 can do, display the low val
-  // else display the max of the two readings
   if (o3_low_val < 10) lcd.print(o3_low_val);
   else lcd.print(max(o3_low_val, o3_high_val));
 }
 
 void timer(int mins, String txt) {
+  /*
+  This is a totally disgusting function to simply display a timer with a title
+
+  This really sucks
+  */
 
   int milli = millis();
   int mins_val = mins;
@@ -277,6 +323,14 @@ void timer(int mins, String txt) {
 }
 
 void flip_flop(btn_interface *inter) {
+  /*
+  This is the main button driver function
+
+  Implements a state machine to hold the button I/O in a certain state
+
+  Additionally, when the state switches, it will change the cuttent and prev state in the interface.
+  Again, previous state should probably be dealt with somewhere else.
+  */
   switch( inter->state )
   {
     case 0://------------------------ I'm off and in restmode
