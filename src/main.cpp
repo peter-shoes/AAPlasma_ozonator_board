@@ -205,7 +205,7 @@ void run_cycle() {
   unsigned int cycle_start = millis();
 
   // turn off all relays if they are on
-  heat.state, oz_1.state, oz_2.state, neb_1.state, neb_2.state = 0;
+  heat.state = 0, oz_1.state = 0, oz_2.state = 0, neb_1.state = 0, neb_2.state = 0;
   relays();
 
   while (cycle.state != 0) {
@@ -331,33 +331,34 @@ void flip_flop(btn_interface *inter) {
   Additionally, when the state switches, it will change the cuttent and prev state in the interface.
   Again, previous state should probably be dealt with somewhere else.
   */
-  switch( inter->state )
-  {
+  switch( inter->state ) {
     case 0://------------------------ I'm off and in restmode
-      if ( digitalRead(inter->btn_pin) == LOW )
-      { // switch relay OFF
+      if ( digitalRead(inter->btn_pin) == LOW ) { 
+        // switch relay OFF
         // switch LED OFF
         inter->prev_state = 0;
         inter->state = 1;
       }
       break;
     case 1://------------------------ I'm in ON mode, w8 4 keyrelease
-      if ( digitalRead(inter->btn_pin) == HIGH )
+      if ( digitalRead(inter->btn_pin) == HIGH ) {
         inter->prev_state = 1;
         inter->state = 2;
+      }
       break;
     case 2://------------------------ I'm ON and in restmode
-      if (  digitalRead(inter->btn_pin) == LOW )
-      { // switch relay ON
+      if (  digitalRead(inter->btn_pin) == LOW ) { 
+        // switch relay ON
         // switch LED ON
-        inter->prev_state - 2;
+        inter->prev_state = 2;
         inter->state = 3;
       }
       break;
     case 3://------------------------ I'm in OFF mode, w8 4 keyrelease
-      if ( digitalRead(inter->btn_pin) == HIGH )
+      if ( digitalRead(inter->btn_pin) == HIGH ) {
         inter->prev_state = 3;
         inter->state = 0;
+      }
       break;
   }
 }
